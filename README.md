@@ -272,6 +272,344 @@ curl http://localhost:8080/api/users/me \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
+---
+
+## Testing Guide
+
+### Quick Test Commands (Copy & Paste)
+
+Run these commands in sequence to test all features:
+
+```bash
+# 1. Check Docker Services
+docker-compose ps
+
+# 2. Health Check
+curl http://localhost:8080/health
+
+# 3. Register New User
+curl -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Doe",
+    "email": "john.doe@example.com",
+    "password": "SecurePassword123!"
+  }'
+
+# 4. Admin Login
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@example.com",
+    "password": "AdminPassword123!"
+  }'
+
+# 5. User Login
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "UserPassword123!"
+  }'
+
+# 6. Get Current User Profile (replace YOUR_ACCESS_TOKEN with token from login)
+curl http://localhost:8080/api/users/me \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+
+# 7. Update User Profile
+curl -X PATCH http://localhost:8080/api/users/me \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -d '{
+    "name": "Updated User Name"
+  }'
+
+# 8. Get All Users (Admin Only - use admin token)
+curl -X GET http://localhost:8080/api/users \
+  -H "Authorization: Bearer ADMIN_ACCESS_TOKEN"
+
+# 9. Test RBAC - User accessing admin endpoint (should get 403)
+curl -i -X GET http://localhost:8080/api/users \
+  -H "Authorization: Bearer USER_ACCESS_TOKEN"
+
+# 10. Test Rate Limiting (12 failed login attempts)
+for i in {1..12}
+do
+  echo "Attempt $i"
+  curl -i -X POST http://localhost:8080/api/auth/login \
+    -H "Content-Type: application/json" \
+    -d '{"email":"wrong@example.com","password":"wrongpassword"}'
+  echo "-------------------------"
+done
+
+# 11. Test Google OAuth Redirect
+curl -I http://localhost:8080/api/auth/google
+
+# 12. Test GitHub OAuth Redirect
+curl -I http://localhost:8080/api/auth/github
+
+# 13. Test Invalid Token
+curl -i http://localhost:8080/api/users/me \
+  -H "Authorization: Bearer invalid-token-here"
+
+# 14. Test Missing Token
+curl -i http://localhost:8080/api/users/me
+```
+
+---
+
+### Complete Test Suite
+
+Below are comprehensive test commands that validate all features of the OAuth service.
+
+#### 1. Health Check
+
+```bash
+curl http://localhost:8080/health
+```
+**Expected Response**: `{"status":"ok"}`
+
+---
+
+#### 2. User Registration
+
+```bash
+curl -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Doe",
+    "email": "john.doe@example.com",
+    "password": "SecurePassword123!"
+  }'
+```
+**Expected Response**:
+```json
+{
+  "id": "99d5aa22-98e4-49ed-ab74-737db3496743",
+  "email": "john.doe@example.com",
+  "name": "John Doe",
+  "role": "user",
+  "created_at": "2026-01-31T07:03:45.461Z"
+}
+```
+
+---
+
+#### 3. User Login
+
+**Admin Login**:
+```bash
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@example.com",
+    "password": "AdminPassword123!"
+  }'
+```
+
+**Regular User Login**:
+```bash
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "UserPassword123!"
+  }'
+```
+
+**Expected Response**:
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+> **Note**: Copy the `accessToken` from the response to use in authenticated requests.
+
+---
+
+#### 4. Get Current User Profile
+
+```bash
+curl http://localhost:8080/api/users/me \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+**Expected Response**:
+```json
+{
+  "id": "984ade86-68f0-4280-bd07-7e969055f976",
+  "email": "admin@example.com",
+  "name": "Admin User",
+  "role": "admin"
+}
+```
+
+---
+
+#### 5. Update User Profile
+
+```bash
+curl -X PATCH http://localhost:8080/api/users/me \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -d '{
+    "name": "Updated User Name"
+  }'
+```
+
+**Expected Response**:
+```json
+{
+  "id": "18615804-f26d-489e-93aa-038b817063e4",
+  "email": "user@example.com",
+  "name": "Updated User Name",
+  "role": "user"
+}
+```
+
+---
+
+#### 6. Get All Users (Admin Only)
+
+**Login as Admin**:
+```bash
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@example.com",
+    "password": "AdminPassword123!"
+  }'
+```
+
+**Get All Users**:
+```bash
+curl -X GET http://localhost:8080/api/users \
+  -H "Authorization: Bearer ADMIN_ACCESS_TOKEN"
+```
+
+**Expected Response**:
+```json
+[
+  {
+    "id": "984ade86-68f0-4280-bd07-7e969055f976",
+    "email": "admin@example.com",
+    "name": "Admin User",
+    "role": "admin"
+  },
+  {
+    "id": "18615804-f26d-489e-93aa-038b817063e4",
+    "email": "user@example.com",
+    "name": "Updated User Name",
+    "role": "user"
+  }
+]
+```
+
+---
+
+#### 7. Role-Based Access Control (RBAC) Test
+
+**Attempt to access admin endpoint with regular user token**:
+```bash
+curl -i -X GET http://localhost:8080/api/users \
+  -H "Authorization: Bearer USER_ACCESS_TOKEN"
+```
+
+**Expected Response**:
+```
+HTTP/1.1 403 Forbidden
+Content-Type: application/json; charset=utf-8
+
+{"error":"Insufficient permissions"}
+```
+
+✅ **Result**: Regular users are correctly denied access to admin endpoints.
+
+---
+
+#### 8. Rate Limiting Test
+
+**Attempt 12 failed login requests** (limit is 10 per minute):
+```bash
+for i in {1..12}
+do
+  echo "Attempt $i"
+  curl -i -X POST http://localhost:8080/api/auth/login \
+    -H "Content-Type: application/json" \
+    -d '{"email":"wrong@example.com","password":"wrongpassword"}'
+  echo "-------------------------"
+done
+```
+
+**Expected Behavior**:
+- Attempts 1-10: `401 Unauthorized` with `{"error":"Invalid credentials"}`
+- Rate limit headers show decreasing: `RateLimit-Remaining: 9, 8, 7...0`
+- Attempts 11-12: `429 Too Many Requests` with `{"error":"Too many requests, please try again later."}`
+- `Retry-After` header indicates wait time
+
+✅ **Result**: Rate limiting successfully protects against brute force attacks.
+
+---
+
+#### 9. OAuth Provider Redirects
+
+**Google OAuth**:
+```bash
+curl -I http://localhost:8080/api/auth/google
+```
+
+**Expected Response**:
+```
+HTTP/1.1 302 Found
+Location: https://accounts.google.com/o/oauth2/v2/auth?response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Fapi%2Fauth%2Fgoogle%2Fcallback&scope=profile%20email&client_id=dummy-google-client-id
+```
+
+**GitHub OAuth**:
+```bash
+curl -I http://localhost:8080/api/auth/github
+```
+
+**Expected Response**:
+```
+HTTP/1.1 302 Found
+Location: https://github.com/login/oauth/authorize?response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Fapi%2Fauth%2Fgithub%2Fcallback&scope=user%3Aemail&client_id=dummy-github-client-id
+```
+
+✅ **Result**: OAuth providers correctly redirect to authentication pages.
+
+---
+
+#### 10. Authentication Security Tests
+
+**Invalid Token**:
+```bash
+curl -i http://localhost:8080/api/users/me \
+  -H "Authorization: Bearer invalid-token-here"
+```
+
+**Expected Response**:
+```
+HTTP/1.1 401 Unauthorized
+{"error":"Invalid or expired token"}
+```
+
+**Missing Token**:
+```bash
+curl -i http://localhost:8080/api/users/me
+```
+
+**Expected Response**:
+```
+HTTP/1.1 401 Unauthorized
+{"error":"No token provided"}
+```
+
+✅ **Result**: Authentication middleware properly validates and rejects invalid/missing tokens.
+
+---
+
 ### Response Formats
 
 **Success (2xx)**
