@@ -31,6 +31,10 @@ An enterprise-grade authentication service that provides:
 - **Rate Limiting** (10 req/min per IP using Redis)
 - **Production Deployment** (Docker Compose ready)
 
+### 🎥 Video Demo
+
+Watch the complete walkthrough: [OAuth Service Demo Video](https://docs.google.com/videos/d/1bPlFVYVm2YmI4TktE3O8HEPUzhyQ5CNWGliW-SA6K4s/edit?usp=sharing)
+
 ### Key Capabilities
 
 | Feature | Details |
