@@ -5,6 +5,11 @@ const redis = require('./config/redis');
 
 const PORT = config.api.port;
 
+/**
+ * Start the Express server with database and cache connections
+ * @async
+ * @function startServer
+ */
 async function startServer() {
   try {
     // Test database connection
