@@ -1,5 +1,9 @@
 require('dotenv').config();
 
+/**
+ * Application configuration object
+ * Loads environment variables and provides defaults
+ */
 module.exports = {
   api: {
     port: process.env.API_PORT || 8080,
