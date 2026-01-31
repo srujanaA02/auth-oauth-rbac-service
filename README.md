@@ -531,17 +531,4 @@ docker-compose up --build
 
 ---
 
-## Additional Resources
 
-- [TESTING_GUIDE.md](TESTING_GUIDE.md) - Comprehensive API test examples
-- [submission.json](submission.json) - Test credentials reference
-- [Prisma Documentation](https://www.prisma.io/docs/)
-- [Express.js Guide](https://expressjs.com/)
-- [JWT Introduction](https://jwt.io/introduction)
-- [Docker Documentation](https://docs.docker.com/)
-
----
-
-## License
-
-ISC
